@@ -11,6 +11,7 @@
 std::string fdmExe = "4DM.exe";
 inline static std::string modloaderCore = ".\\4DModLoader-Core.dll";
 
+bool attachedToConsole = false;
 PROCESS_INFORMATION startup(LPCSTR lpApplicationName, const std::vector<std::string>& args, bool suspended = true)
 {
 	// additional information
@@ -36,8 +37,8 @@ PROCESS_INFORMATION startup(LPCSTR lpApplicationName, const std::vector<std::str
 		const_cast<char*>(argsStream.str().c_str()),
 		NULL,
 		NULL,
-		FALSE,
-		CREATE_NEW_CONSOLE | (suspended ? CREATE_SUSPENDED : 0),
+		TRUE,
+		/*CREATE_NEW_CONSOLE | */(suspended ? CREATE_SUSPENDED : 0),
 		NULL,
 		NULL,
 		&si,
@@ -79,6 +80,7 @@ int main_(const std::vector<std::string>& args)
 	bool jitDebug = false;
 	std::string debugger = DEFAULT_JIT_DEBUGGER_CMD;
 	bool debuggerOverride = false;
+	bool offline = false;
 	for (auto& arg : args)
 	{
 		// -help
@@ -86,14 +88,15 @@ int main_(const std::vector<std::string>& args)
 			if (arg == "-help" || arg == "--help" || arg == "help")
 			{
 				print(std::format(
-					"4DModLoader.exe flags/launch arguments:\r\n"
-					" -help or --help or help  -  Outputs this and does not launch anything.\r\n"
-					" -4dm <path to an .exe>  -  Overrides the \"4D Miner executable\".\r\n\tDefault: {}\r\n"
-					" -debug  -  Attaches a debugger to the just started 4D Miner process.\r\n"
-					" -debugger <cmd for a debugger with a PID>  -  Overrides the debugger cmd to be used with -debug.\r\n\tDefault: \"" DEFAULT_JIT_DEBUGGER_CMD "\"\r\n"
-					" 4DModLoader-Core specific launch arguments:\r\n"
-					"  -console  -  Starts the debug console. (since v2.2)\r\n  there might be more if you are on an outdated 4DModLoader.exe that doesn't know about them.\r\n"
-					" + whatever mod launch arguments there might be\r\n"
+					"4DModLoader.exe flags/launch arguments:\n"
+					" -help or --help or help  -  Outputs this and does not launch anything.\n"
+					" -4dm <path to an .exe>  -  Overrides the \"4D Miner executable\".\n\tDefault: {}\n"
+					" -debug  -  Attaches a debugger to the just started 4D Miner process.\n"
+					" -debugger <cmd for a debugger with a PID>  -  Overrides the debugger cmd to be used with -debug.\n\tDefault: \"" DEFAULT_JIT_DEBUGGER_CMD "\"\n"
+					" -offline  -  Disable Auto-Updater Online Checks.\n"
+					" 4DModLoader-Core specific launch arguments:\n"
+					"  -console  -  Starts the debug console. (since v2.2)\n  there might be more if you are on an outdated 4DModLoader.exe that doesn't know about them.\n"
+					" + whatever mod launch arguments there might be\n"
 					, fdmExe)
 				);
 				std::cin.get();
@@ -137,12 +140,24 @@ int main_(const std::vector<std::string>& args)
 				continue;
 			}
 		}
+		// -offline
+		{
+			if (!offline && arg == "-offline")
+			{
+				offline = true;
+				continue;
+			}
+		}
 	}
 	if (!fdmOverrideStr.empty())
 		fdmExe = fdmOverrideStr.c_str();
 
-	AutoUpdate();
-	CheckForLibs();
+	if (!offline)
+	{
+		AutoUpdate();
+		CheckForLibs();
+	}
+
 	auto gameProcessInfo = startup(fdmExe.c_str(), args);
 	HANDLE& gameProcess = gameProcessInfo.hProcess;
 	HANDLE& gameThread = gameProcessInfo.hThread;
@@ -178,6 +193,18 @@ int main_(const std::vector<std::string>& args)
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 {
+	if (attachedToConsole = AttachConsole(ATTACH_PARENT_PROCESS))
+	{
+		AllocConsole();
+
+		FILE* fpout;
+		FILE* fpin;
+		freopen_s(&fpout, "CONOUT$", "wt", stdout);
+		freopen_s(&fpin, "CONIN$", "rt", stdin);
+
+		SetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), ENABLE_VIRTUAL_TERMINAL_PROCESSING | ENABLE_PROCESSED_OUTPUT);
+	}
+
 	std::vector<std::string> args;
 
 	int argc = 0;
