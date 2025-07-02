@@ -38,7 +38,7 @@ PROCESS_INFORMATION startup(LPCSTR lpApplicationName, const std::vector<std::str
 		NULL,
 		NULL,
 		TRUE,
-		/*CREATE_NEW_CONSOLE | */(suspended ? CREATE_SUSPENDED : 0),
+		(!attachedToConsole ? CREATE_NEW_CONSOLE : 0) | (suspended ? CREATE_SUSPENDED : 0),
 		NULL,
 		NULL,
 		&si,
@@ -188,9 +188,25 @@ int main_(const std::vector<std::string>& args)
 
 	ResumeThread(gameThread);
 
+	if (attachedToConsole)
+	{
+		WaitForSingleObject(gameProcess, INFINITE);
+		WaitForSingleObject(gameThread, INFINITE);
+	}
+
+	CloseHandle(gameProcess);
+	CloseHandle(gameThread);
+
+	if (consoleOpen && !attachedToConsole)
+	{
+		printf("You can close this window if it is still open for some reason :)\n");
+		FreeConsole();
+	}
+
 	return 0;
 }
 
+/*
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 {
 	if (attachedToConsole = AttachConsole(ATTACH_PARENT_PROCESS))
@@ -230,8 +246,33 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	exit(returnV);
 	return returnV;
 }
+*/
 
-int main()
+int main(int argc, char* argv[])
 {
-	return main_({});
+	DWORD processList[2];
+	DWORD processCount = GetConsoleProcessList(processList, 2);
+
+	if (processCount <= 1)
+	{
+		HWND hwnd = GetConsoleWindow();
+		if (hwnd)
+		{
+			FreeConsole();
+		}
+	}
+	else
+	{
+		attachedToConsole = true;
+		SetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), ENABLE_VIRTUAL_TERMINAL_PROCESSING | ENABLE_PROCESSED_OUTPUT);
+	}
+
+	std::vector<std::string> args;
+	args.reserve(argc - 1);
+	for (int i = 1; i < argc; ++i)
+	{
+		args.emplace_back(argv[i]);
+	}
+
+	return main_(args);
 }

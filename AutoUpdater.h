@@ -14,6 +14,8 @@ inline static constexpr uint64_t fdm0214VerOffset = 0x2434C8; // "0.2.1.4 Alpha"
 inline static constexpr std::string fdm0214VerName = "0.2.1.4 Alpha";
 
 inline static bool consoleOpen = false;
+inline static FILE* fpout;
+inline static FILE* fpin;
 
 extern std::string fdmExe;
 
@@ -23,8 +25,6 @@ inline static void print(const std::string& msg)
 	{
 		AllocConsole();
 
-		FILE* fpout;
-		FILE* fpin;
 		freopen_s(&fpout, "CONOUT$", "wt", stdout);
 		freopen_s(&fpin, "CONIN$", "rt", stdin);
 
