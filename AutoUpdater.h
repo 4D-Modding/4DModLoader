@@ -1,6 +1,6 @@
 #pragma once
 
-#define VERSION "2026.04.19.1"
+#define VERSION "2026.04.19.2"
 
 //#define DEV
 
@@ -276,7 +276,7 @@ bool updateModLoader()
 		auto thisPathOld = thisPath_;
 		thisPathOld.replace_extension(".exe.old");
 
-		auto pdbPath_ = thisPath_;
+		auto pdbPath_ = thisPath_.root_directory() / "4DModLoader.pdb";
 		pdbPath_.replace_extension(".pdb");
 
 		auto pdbPathOld = pdbPath_;
@@ -487,7 +487,7 @@ void AutoUpdate()
 		auto thisPathOld = thisPath_;
 		thisPathOld.replace_extension(".exe.old");
 
-		auto pdbPath_ = thisPath_;
+		auto pdbPath_ = thisPath_.root_directory() / "4DModLoader.pdb";
 		pdbPath_.replace_extension(".pdb");
 
 		auto pdbPathOld = pdbPath_;
