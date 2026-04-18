@@ -10,10 +10,12 @@
 
 std::string fdmExe = "4DM.exe";
 bool attachedToConsole = false;
+std::string thisPath = "";
+std::vector<std::string> args{};
 
 inline static std::string modloaderCore = ".\\4DModLoader-Core.dll";
 
-PROCESS_INFORMATION startup(LPCSTR lpApplicationName, const std::vector<std::string>& args, bool suspended = true)
+PROCESS_INFORMATION startup(LPCSTR lpApplicationName, const std::vector<std::string>& args, bool suspended)
 {
 	// additional information
 	STARTUPINFOA si;
@@ -159,7 +161,7 @@ int main_(const std::vector<std::string>& args)
 		int timeout = 1000; // 1 second
 		InternetSetOption(NULL, INTERNET_OPTION_CONNECT_TIMEOUT, &timeout, sizeof(timeout));
 		AutoUpdate();
-		CheckForLibs();
+		//CheckForLibs();
 	}
 
 	auto gameProcessInfo = startup(fdmExe.c_str(), args);
@@ -195,7 +197,6 @@ int main_(const std::vector<std::string>& args)
 	if (attachedToConsole)
 	{
 		WaitForSingleObject(gameProcess, INFINITE);
-		WaitForSingleObject(gameThread, INFINITE);
 	}
 
 	CloseHandle(gameProcess);
@@ -254,6 +255,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 int main(int argc, char* argv[])
 {
+	thisPath = argv[0];
+
 	DWORD processList[2];
 	DWORD processCount = GetConsoleProcessList(processList, 2);
 
@@ -271,7 +274,6 @@ int main(int argc, char* argv[])
 		SetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), ENABLE_VIRTUAL_TERMINAL_PROCESSING | ENABLE_PROCESSED_OUTPUT);
 	}
 
-	std::vector<std::string> args;
 	args.reserve(argc - 1);
 	for (int i = 1; i < argc; ++i)
 	{

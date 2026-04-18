@@ -27,7 +27,11 @@ std::vector<unsigned char> SendPostRequest(const std::string& hostname, const st
 		return {};
 	}
 
+#ifdef SERVER_HTTP
+	HINTERNET hConnection = InternetConnectA(hInternet, hostname.c_str(), 8080, NULL, NULL, INTERNET_SERVICE_HTTP, 0, 1);
+#else
 	HINTERNET hConnection = InternetConnectA(hInternet, hostname.c_str(), 443, NULL, NULL, INTERNET_SERVICE_HTTP, 0, 1);
+#endif
 	if (hConnection == NULL)
 	{
 		InternetCloseHandle(hInternet);
@@ -35,7 +39,11 @@ std::vector<unsigned char> SendPostRequest(const std::string& hostname, const st
 		return {};
 	}
 
+#ifdef SERVER_HTTP
+	HINTERNET hRequest = HttpOpenRequestA(hConnection, "POST", path.c_str(), NULL, NULL, NULL, NULL, 1);
+#else
 	HINTERNET hRequest = HttpOpenRequestA(hConnection, "POST", path.c_str(), NULL, NULL, NULL, INTERNET_FLAG_SECURE, 1);
+#endif
 	if (hRequest == NULL)
 	{
 		InternetCloseHandle(hConnection);
@@ -89,7 +97,11 @@ std::vector<unsigned char> SendGetRequest(const std::string& hostname, const std
 		return {};
 	}
 
+#ifdef SERVER_HTTP
+	HINTERNET hConnection = InternetConnectA(hInternet, hostname.c_str(), 8080, NULL, NULL, INTERNET_SERVICE_HTTP, 0, 1);
+#else
 	HINTERNET hConnection = InternetConnectA(hInternet, hostname.c_str(), 443, NULL, NULL, INTERNET_SERVICE_HTTP, 0, 1);
+#endif
 	if (hConnection == NULL)
 	{
 		InternetCloseHandle(hInternet);
@@ -97,7 +109,11 @@ std::vector<unsigned char> SendGetRequest(const std::string& hostname, const std
 		return {};
 	}
 
+#ifdef SERVER_HTTP
+	HINTERNET hRequest = HttpOpenRequestA(hConnection, "GET", path.c_str(), NULL, NULL, NULL, NULL, 1);
+#else
 	HINTERNET hRequest = HttpOpenRequestA(hConnection, "GET", path.c_str(), NULL, NULL, NULL, INTERNET_FLAG_SECURE, 1);
+#endif
 	if (hRequest == NULL)
 	{
 		InternetCloseHandle(hConnection);
