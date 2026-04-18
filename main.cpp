@@ -9,9 +9,10 @@
 #include "AutoUpdater.h"
 
 std::string fdmExe = "4DM.exe";
+bool attachedToConsole = false;
+
 inline static std::string modloaderCore = ".\\4DModLoader-Core.dll";
 
-bool attachedToConsole = false;
 PROCESS_INFORMATION startup(LPCSTR lpApplicationName, const std::vector<std::string>& args, bool suspended = true)
 {
 	// additional information
@@ -56,8 +57,9 @@ bool Inject(HANDLE process, HANDLE thread)
 	LPVOID LoadLibAddr = (LPVOID)GetProcAddress(GetModuleHandleA("kernel32.dll"), "LoadLibraryA");
 
 	LPVOID LoadLocation = VirtualAllocEx(process, 0, modloaderCore.size(), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-	HANDLE RemoteThread = CreateRemoteThread(process, 0, 0, (LPTHREAD_START_ROUTINE)LoadLibAddr, LoadLocation, 0, 0);
 	WriteProcessMemory(process, LoadLocation, modloaderCore.c_str(), modloaderCore.size(), NULL);
+
+	HANDLE RemoteThread = CreateRemoteThread(process, 0, 0, (LPTHREAD_START_ROUTINE)LoadLibAddr, LoadLocation, 0, 0);
 	WaitForSingleObject(RemoteThread, INFINITE);
 
 	VirtualFreeEx(process, LoadLocation, modloaderCore.size(), MEM_RELEASE);
@@ -154,6 +156,8 @@ int main_(const std::vector<std::string>& args)
 
 	if (!offline)
 	{
+		int timeout = 1000; // 1 second
+		InternetSetOption(NULL, INTERNET_OPTION_CONNECT_TIMEOUT, &timeout, sizeof(timeout));
 		AutoUpdate();
 		CheckForLibs();
 	}

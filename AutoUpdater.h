@@ -6,6 +6,8 @@
 #include "requests.h"
 #include "json.hpp"
 #include <fstream>
+#include <thread>
+#include <atomic>
 
 inline static constexpr uint64_t fdm014xOffset = 0x159BB8;
 inline static constexpr int fdm0140InitCrashRptStartValue = 0x74696E49;
@@ -18,6 +20,7 @@ inline static FILE* fpout;
 inline static FILE* fpin;
 
 extern std::string fdmExe;
+extern bool attachedToConsole;
 
 inline static void print(const std::string& msg)
 {
@@ -184,10 +187,46 @@ void AutoUpdate()
 
 	std::string verNum = updateJson["versionNumber"];
 
-	printf("New 4DModLoader v%s is available for 4D Miner v%s\n", verNum.c_str(), vers[1].c_str());
+	print(std::format("New 4DModLoader v{} is available for 4D Miner v{}\n", verNum.c_str(), vers[1].c_str()));
 
-	if (MessageBoxA(0, std::format("New 4DModLoader v{} is available for 4D Miner v{}.\nWould you like to update?\n(you can turn this off in the game Settings)", verNum, vers[1]).c_str(), "Auto-Updater", MB_ICONQUESTION | MB_OKCANCEL) != IDOK)
-		return;
+	if (!attachedToConsole)
+	{
+		if (MessageBoxA(0, std::format("New 4DModLoader v{} is available for 4D Miner v{}.\nWould you like to update?\n(you can turn this off in settings or use -offline)", verNum, vers[1]).c_str(), "Auto-Updater", MB_ICONQUESTION | MB_OKCANCEL) != IDOK)
+		{
+			return;
+		}
+	}
+	else
+	{
+		print(std::format("Would you like to install the update? [Y/N]\n"));
+		std::atomic<bool> answered = false;
+		std::string answer;
+		std::thread inputThread{ [&]()
+			{
+				std::cin >> answer;
+				answered = true;
+			}
+		};
+
+		for (int i = 0; i < 5; ++i)
+		{
+			print(".");
+			std::this_thread::sleep_for(std::chrono::seconds(1));
+			if (answered) break;
+		}
+
+		inputThread.detach();
+
+		if (!answered || answer.empty())
+		{
+			print(std::format("\ni guess not\n"));
+		}
+
+		if (!answered || answer.empty() || std::tolower(answer[0]) != 'y')
+		{
+			return;
+		}
+	}
 
 	print("Downloading new files...\n\n");
 
@@ -244,17 +283,20 @@ void CheckForLibs()
 	nlohmann::json versionsJson = nlohmann::json::parse(result);
 
 	int64_t bytesDownloaded = 0;
-	for (auto& lib : versionsJson["libs"])
+	if (versionsJson.contains("libs"))
 	{
-		std::string libStr = lib;
-		if (!std::filesystem::exists(libStr))
+		for (auto& lib : versionsJson["libs"])
 		{
-			print(std::format("Missing {}! Downloading it now...\n", libStr));
-			bytesDownloaded = 0;
-			if (DownloadFile(std::format(SERVER_FILES "/core-files/{}", libStr), libStr, bytesDownloaded))
-				print(std::format("\tDownloaded ({}).\n", bytesDownloaded));
-			else
-				print("\tFailed.\n");
+			std::string libStr = lib;
+			if (!std::filesystem::exists(libStr))
+			{
+				print(std::format("Missing {}! Downloading it now...\n", libStr));
+				bytesDownloaded = 0;
+				if (DownloadFile(std::format(SERVER_FILES "/core-files/{}", libStr), libStr, bytesDownloaded))
+					print(std::format("\tDownloaded ({}).\n", bytesDownloaded));
+				else
+					print("\tFailed.\n");
+			}
 		}
 	}
 }
