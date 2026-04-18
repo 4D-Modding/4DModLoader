@@ -1,6 +1,6 @@
 #pragma once
 
-#define VERSION "2026.04.19.0"
+#define VERSION "2026.04.19.1"
 
 //#define DEV
 
@@ -283,7 +283,7 @@ bool updateModLoader()
 		pdbPathOld.replace_extension(".pdb.old");
 
 		try { std::filesystem::rename(thisPath_, thisPathOld); }
-		catch (const std::exception& e) { print("Failed to rename self .exe\n"); return false; }
+		catch (const std::exception& e) { print("Failed to update self .exe\n"); return false; }
 
 		int64_t bytesDownloaded = 0;
 		print("Downloading 4DModLoader.exe...\n");
@@ -298,23 +298,26 @@ bool updateModLoader()
 			return false;
 		}
 
-		try
+		if (std::filesystem::exists(pdbPath_))
 		{
-			std::filesystem::rename(pdbPath_, pdbPathOld);
+			try
+			{
+				std::filesystem::rename(pdbPath_, pdbPathOld);
 
-			print("Downloading 4DModLoader.pdb...\n");
-			bytesDownloaded = 0;
-			if (DownloadFile(SERVER_FILES "/core-files/4DModLoader.pdb", pdbPath_.string(), bytesDownloaded))
-			{
-				print(std::format("\tDownloaded ({}).\n", bytesDownloaded));
+				print("Downloading 4DModLoader.pdb...\n");
+				bytesDownloaded = 0;
+				if (DownloadFile(SERVER_FILES "/core-files/4DModLoader.pdb", pdbPath_.string(), bytesDownloaded))
+				{
+					print(std::format("\tDownloaded ({}).\n", bytesDownloaded));
+				}
+				else
+				{
+					print("\tFailed.\n");
+					return false;
+				}
 			}
-			else
-			{
-				print("\tFailed.\n");
-				return false;
-			}
+			catch (const std::exception& e) { print("Failed to update self .pdb\n"); return false; }
 		}
-		catch (const std::exception& e) { print("Failed to rename self .pdb\n"); return false; }
 
 		return true;
 	}
